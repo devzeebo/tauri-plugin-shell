@@ -165,6 +165,8 @@ pub fn execute<R: Runtime>(
         },
     };
 
+    println!("cmd: {:#?}", command);
+
     let (mut rx, child) = command.spawn()?;
 
     let pid = child.pid();

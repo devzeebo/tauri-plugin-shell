@@ -238,51 +238,28 @@ impl<'a> ShellScope<'a> {
         args: ExecuteArgs,
         sidecar: Option<&str>,
     ) -> Result<Command, Error> {
-        let command = match self.scopes.iter().find(|s| s.name == command_name) {
-            Some(command) => command,
-            None => return Err(Error::NotFound(command_name.into())),
+        // let command = match self.scopes.iter().find(|s| s.name == command_name) {
+        //     Some(command) => command,
+        //     None => return Err(Error::NotFound(command_name.into())),
+        // };
+        let command = ScopeAllowedCommand {
+            name: command_name.into(),
+            command: command_name.into(),
+            args: Some(vec![]),
+            sidecar: false,
         };
 
         if command.sidecar != sidecar.is_some() {
             return Err(Error::BadSidecarFlag);
         }
 
-        let args = match (&command.args, args) {
-            (None, ExecuteArgs::None) => Ok(vec![]),
-            (None, ExecuteArgs::List(list)) => Ok(list),
-            (None, ExecuteArgs::Single(string)) => Ok(vec![string]),
-            (Some(list), ExecuteArgs::List(args)) => list
-                .iter()
-                .enumerate()
-                .map(|(i, arg)| match arg {
-                    ScopeAllowedArg::Fixed(fixed) => Ok(fixed.to_string()),
-                    ScopeAllowedArg::Var { validator } => {
-                        let value = args
-                            .get(i)
-                            .ok_or_else(|| Error::MissingVar(i, validator.to_string()))?
-                            .to_string();
-                        if validator.is_match(&value) {
-                            Ok(value)
-                        } else {
-                            Err(Error::Validation {
-                                index: i,
-                                validation: validator.to_string(),
-                            })
-                        }
-                    }
-                })
-                .collect(),
-            (Some(list), arg) if arg.is_empty() && list.iter().all(ScopeAllowedArg::is_fixed) => {
-                list.iter()
-                    .map(|arg| match arg {
-                        ScopeAllowedArg::Fixed(fixed) => Ok(fixed.to_string()),
-                        _ => unreachable!(),
-                    })
-                    .collect()
-            }
-            (Some(list), _) if list.is_empty() => Err(Error::InvalidInput(command_name.into())),
-            (Some(_), _) => Err(Error::InvalidInput(command_name.into())),
-        }?;
+        let args = match args {
+            ExecuteArgs::None => vec![],
+            ExecuteArgs::List(list) => list,
+            ExecuteArgs::Single(string) => vec![string],
+        };
+
+        println!("args {:#?}", args);
 
         let command_s = sidecar
             .map(|s| {
